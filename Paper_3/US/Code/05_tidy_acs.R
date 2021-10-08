@@ -22,7 +22,7 @@ for (i in 1:length(ACS.files)){
 ## Bind together all state frames
 holder <- do.call("rbind", holder)
 
-## Convert state fips to ST abrreviation
+## Convert state fips to ST abbreviation
 post_2012 <- holder %>%
   mutate(ST = FIPS_to_ST(ST)) %>%
   group_by(ST) %>%

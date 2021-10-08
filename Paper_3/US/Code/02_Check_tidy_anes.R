@@ -1,5 +1,5 @@
 ## Script to check if all coded ANES data frames have same 
-## variable level.
+## variable levels.
 
 ## Setwd
 setwd(dirname(rstudioapi::documentPath()))
@@ -19,7 +19,7 @@ anes_2016 <- dat
 ## Checks that all var levels are in each data frame
 
 ## State - 2008 only has 34 states.
-#stopifnot(levels(as.factor(anes_2008$ST)) == levels(as.factor(anes_2012$ST)))
+stopifnot(levels(as.factor(anes_2008$ST)) == levels(as.factor(anes_2012$ST)))
 stopifnot(levels(as.factor(anes_2016$ST)) == levels(as.factor(anes_2012$ST)))
 
 ## Region

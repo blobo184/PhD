@@ -1,4 +1,4 @@
-## Utility
+## Utility functions for US
 
 ## FIPS to ST abreviation
 FIPS_to_ST <- function(x) {
@@ -18,6 +18,7 @@ FIPS_to_ST <- function(x) {
                      "54" = "WV",	"55" = "WI",	"56" = "WY", .default = NA_character_)
 }
 
+# State to Region lookup
 State_to_Region <- function(x){
   x <- dplyr::recode(x,
                      "Alabama" = "South",	"Alaska" = "West",	"Arizona" = "West",	"Arkansas" = "South",
@@ -37,6 +38,7 @@ State_to_Region <- function(x){
   
 }
 
+# FIPS to state lookup
 FIPS_to_State <- function(x) {
   x <- dplyr::recode(x, 
                      "1" = "Alabama",	"2" = "Alaska",	"4" = "Arizona",	"5" = "Arkansas",
@@ -54,6 +56,7 @@ FIPS_to_State <- function(x) {
                      "54" = "West Virginia",	"55" = "Wisconsin",	"56" = "Wyoming")
 }
 
+# Generate State to ST abbreviation lookup table
 get_State_to_ST <- function(){
   dat <- data.frame(no = 1:100)
   dat$ST <- FIPS_to_ST(dat$no)
@@ -66,7 +69,7 @@ get_State_to_ST <- function(){
   dat
 }
 
-
+# Generate ST to region lookup table
 get_ST_to_Region <- function(){
   dat <- data.frame(no = 1:100)
   dat$Area <- FIPS_to_ST(dat$no)
@@ -119,11 +122,12 @@ gather_ACS <- function(path){
   psa
 }
 
-
+# Function to gather and specify inf. priors
 get_inf_priors <- function(lambda, mod){
   require(tidyverse)
   require(brms)
   require(tidybayes)
+  
   # Get mu and sd for all fixed effects
   b_est <- mod %>%
     gather_draws(`b_.*`, regex = T) %>%
@@ -179,11 +183,8 @@ get_inf_priors <- function(lambda, mod){
 
 ## Function used to get the fixed effect informative priors
 get_inf_priors_FE <- function(mod, lambda) {
-  # Function to get coef est mu and sd from model
-  ## and print to set_prior brms for new model.
   
   # Extract b mu and sd from model and convert 
-  # brms set_prior format
   b_est <- mod %>%
     gather_draws(`b_.*`, regex = T) %>%
     group_by(.variable) %>%
@@ -295,28 +296,102 @@ post_strat <- function(mod, post, iters){
   result.export
 }
 
-## Poststratification function
-demog_post_strat <- function(mod, post, iters){
+## Extract variable parameter posteriors 
+extract_posteriors <- function(paths){
   
-  out<- brms::posterior_epred(mod,
-                              newdata=post,
-                              draws = iters)
-  out.m <- melt(out, varnames = c("iter", "post_row"))
-  out.m$weight <- post$w[out.m$post_row]
-  out.m$Age <- post$Age[out.m$post_row]
-  out.m$Education <- post$Education[out.m$post_row]
-  out.m$Marital <- post$Marital[out.m$post_row]
-  out.m$Ethnicity <- post$Ethnicity[out.m$post_row]
-  out.m$Turnout <- post$Turnout[out.m$post_row]
   
-  results <- out.m %>%
-    group_by(Age, Education, Marital, Ethnicity, iter) %>%
-    summarise(temp.Pred = sum((value*Turnout)*weight))
-  
-  result.export <- results %>%
-    group_by(Age, Education, Marital, Ethnicity) %>%
-    summarise(Pred = mean(temp.Pred),
-              Pred_lo = quantile(temp.Pred, 0.05),
-              Pred_hi = quantile(temp.Pred, 0.95))
-  result.export
+  holder <- list()
+  for (i in 1:length(paths)){
+    
+    path <- paths[i]
+    sample <- str_split(str_split(path, "Sample_")[[1]][2], "/")[[1]][1]
+    year <- if(grepl("2012", path)==TRUE){2012} else{2016}
+    model <- case_when(
+      grepl("weak", path)=="TRUE" ~ "Weakly inf.",
+      grepl("inf_", path)=="TRUE" ~ "Random effect",
+      grepl("fe_", path)=="TRUE" ~ "Fixed effect")
+    lambda <- case_when(
+      model == "Weakly inf." ~ NA_real_,
+      grepl("_a", path)=="TRUE" ~ 1,
+      grepl("_b", path)=="TRUE" ~ 1.5,
+      grepl("_c", path)=="TRUE" ~ 2)
+    
+    mod <- readRDS(path)
+    
+    # Intercept
+    mod_Intercept <- mod %>%
+      spread_draws(b_Intercept) %>%
+      mutate(Sample = sample,
+             Model = model,
+             Lambda = lambda,
+             Year = year,
+             Variable = "Intercept") %>%
+      rename(Effect = b_Intercept)
+    
+    # Ethnicity
+    mod_Ethnicity <- mod %>%
+      spread_draws(r_Ethnicity[condition,]) %>%
+      mutate(Sample = sample,
+             Model = model,
+             Lambda = lambda,
+             Year = year,
+             Variable = "Ethnicity") %>%
+      rename(Effect = r_Ethnicity)
+    
+    # Age
+    mod_Age <- mod %>%
+      spread_draws(r_Age[condition,]) %>%
+      mutate(Sample = sample,
+             Model = model,
+             Lambda = lambda,
+             Year = year,
+             Variable = "Age") %>%
+      rename(Effect = r_Age)
+    
+    # Marital
+    mod_Marital <- mod %>%
+      spread_draws(r_Marital[condition,]) %>%
+      mutate(Sample = sample,
+             Model = model,
+             Lambda = lambda,
+             Year = year,
+             Variable = "Marital") %>%
+      rename(Effect = r_Marital)
+    
+    # Education
+    mod_Education <- mod %>%
+      spread_draws(r_Education[condition,]) %>%
+      mutate(Sample = sample,
+             Model = model,
+             Lambda = lambda,
+             Year = year,
+             Variable = "Education") %>%
+      rename(Effect = r_Education)
+    
+    ## Area - here I use 5 states
+    state <- mod %>%
+      spread_draws(r_Area[condition,]) %>%
+      dplyr::filter(condition %in% c("NC", "VA", "IA", "TX", "PA")) %>%
+      mutate(Sample = sample,
+             Model = model,
+             Lambda = lambda,
+             Year = year,
+             Variable = "State") %>%
+      rename(Effect = r_Area)
+    
+    ## Past Democratic vote
+    past_dem <- mod %>%
+      spread_draws(b_past_dem) %>%
+      mutate(Sample = sample,
+             Model = model,
+             Lambda = lambda,
+             Year = year,
+             Variable = "Dem_vote",
+             condition = "Fixef") %>%
+      rename(Effect = b_past_dem)
+    
+    holder[[i]] <- do.call("rbind", list(mod_Age, mod_Ethnicity, mod_Marital, past_dem, state, mod_Intercept, mod_Education))
+  }
+  dat <- do.call("rbind", holder)
+  dat
 }

@@ -1,4 +1,4 @@
-## Script to download and unzip all ACS 5-year files for eact state
+## Script to download and unzip all ACS 5-year files for each state
 load("../Data/anes_2016_tidy.RData")
 st <- unique(anes_2016$ST)
 st <- tolower(st)

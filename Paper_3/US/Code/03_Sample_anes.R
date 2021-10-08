@@ -1,4 +1,4 @@
-## Script to sample from anes surveys
+## Script to sample from anes for necessary sample sizes
 
 ## Setwd
 setwd(dirname(rstudioapi::documentPath()))
