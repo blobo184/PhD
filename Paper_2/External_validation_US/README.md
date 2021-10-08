@@ -4,7 +4,7 @@ This directory contains all materials for US external validation study.
 
 The study predicts US Republican state-level vote share for even, 2:1 and 3:2:1 sample distributions.
 
-All scripts in code directory should be run in order.
+All scripts in code directory should be run in order. All data needs to be stored in Data directory. A Results directory needs to be created to save any results.
 
 Data necessary as follows:
   - 2016_turnout.csv made available in Data directory.
