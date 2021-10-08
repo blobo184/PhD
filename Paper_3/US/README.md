@@ -1,5 +1,9 @@
+# Paper 3: US
+
 Research requires scripts to be run in order.
+
 Requires data and results directories in US directory.
+
 Data required are as follows:
   - pums_2012 and pums2016. Accessed here:https://www.census.gov/programs-surveys/acs/microdata/access.html
   - ANES 2012, 2008, 2012 and 2016. Accessed here: https://electionstudies.org/
