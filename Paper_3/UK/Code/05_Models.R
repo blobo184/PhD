@@ -1,4 +1,4 @@
-## Script to run test models
+## Script to run models
 
 ## Set working directory as UK folder
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
@@ -13,7 +13,7 @@ library(tidybayes)
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
 
-## Values for text
+## Values for test
 # lambda <- 1
 # sample <- 10
 # year <- 2017

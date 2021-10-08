@@ -1,4 +1,5 @@
 ## Sampling from the total bes frames
+## This script samples from total bes to get necessary sample sizes
 
 ## Setwd
 setwd(dirname(rstudioapi::documentPath()))
@@ -20,10 +21,10 @@ dir.create("../Data/Sample_30/")
 # Seed number: 7638884
 runif(1, 0, 10000000)
 
-## Sample respondents from anes surveys
-## The below function samples from anes surveys and saves in sample size folders.
+## Sample respondents from bes surveys
+## The below function samples from bes surveys and saves in sample size folders.
 ## You need to enter N, average number of respondents per small area.
-sample_anes <- function(N) {
+sample_bes <- function(N) {
   
   path <- if (N == 5){
     "../Data/Sample_5/"
@@ -114,10 +115,10 @@ bes_2019 <- dat
 rm(dat)
 
 ## Sample from anes
-sample_anes(N = 5)
-sample_anes(N = 10)
-sample_anes(N = 20)
-sample_anes(N = 30)
+sample_bes(N = 5)
+sample_bes(N = 10)
+sample_bes(N = 20)
+sample_bes(N = 30)
 
 ## Check that sampling has worked and variable category are identical
 check_func <- function(path){

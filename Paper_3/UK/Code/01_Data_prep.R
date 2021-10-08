@@ -48,10 +48,11 @@ prepare_bes <- function(path, age_var, edu_var, gender_var, pcon_var, vote_var, 
   dat
 }
 
-## Read in area-level vars and append relevant vars to bes data
+## Read in area-level vars, to be appended to bes data
 area_vars <- read.csv("../Data/area_vars.csv")
 
-## Create and save bes 2015
+## Create dataframe for 2015
+# Read and prepare 2015 bes
 bes_2015 <- prepare_bes("../Data/bes_2015.sav",
                         vote_var = "generalElectionVote",
                         turnout_var = "turnoutUKGeneral",
@@ -60,6 +61,7 @@ bes_2015 <- prepare_bes("../Data/bes_2015.sav",
                         gender_var = "gender",
                         pcon_var = "pcon")
 
+# Select necessary area-level vars
 append_2015 <- area_vars %>%
   dplyr::select(Area = ONSConstID, Region, Long_term_unemployed, 
                 Population_density, Industry_manufacturing, Past_Lab = Lab10) %>%
@@ -67,14 +69,16 @@ append_2015 <- area_vars %>%
          Population_density = arm::rescale(Population_density),
          Industry_manufacturing = arm::rescale(Industry_manufacturing),
          Past_Lab = arm::rescale(Past_Lab))
-  
+
+# Join bes and area-level vars  
 dat <- left_join(bes_2015, append_2015, by = "Area") %>%
   mutate(Year = 2015)
 
 # Save
 save(dat, file = "../Data/bes_2015.RData")
 
-## create and save bes 2017
+## Create dataframe for 2017
+# Read and prepare 2017 bes
 bes_2017 <- prepare_bes("../Data/bes_2017.sav",
                         vote_var = "generalElectionVote",
                         turnout_var = "turnoutUKGeneral",
@@ -83,6 +87,7 @@ bes_2017 <- prepare_bes("../Data/bes_2017.sav",
                         gender_var = "gender",
                         pcon_var = "pcon")
 
+# Select necessary area-level vars
 append_2017 <- area_vars %>%
   dplyr::select(Area = ONSConstID, Region, leavehanretty, Long_term_unemployed, 
                 Population_density, Industry_manufacturing, Past_Lab = Lab15) %>%
@@ -92,11 +97,13 @@ append_2017 <- area_vars %>%
          Industry_manufacturing = arm::rescale(Industry_manufacturing),
          Past_Lab = arm::rescale(Past_Lab))
 
+# Join bes and area-level vars  
 dat <- left_join(bes_2017, append_2017, by = "Area") %>%
   mutate(Year = 2017)
 save(dat, file = "../Data/bes_2017.RData")
 
-## Create and save bes 2019
+## Create dataframe for 2019
+# Read and prepare 2019 bes
 bes_2019 <- prepare_bes("../Data/bes_2019.sav",
                         vote_var = "generalElectionVote",
                         turnout_var = "turnoutUKGeneral",
@@ -105,6 +112,7 @@ bes_2019 <- prepare_bes("../Data/bes_2019.sav",
                         gender_var = "gender",
                         pcon_var = "pcon")
 
+# Select necessary area-level vars
 append_2019 <- area_vars %>%
   dplyr::select(Area = ONSConstID, Region, leavehanretty, Long_term_unemployed, 
                 Population_density, Industry_manufacturing, Past_Lab = Lab17) %>%
@@ -114,11 +122,14 @@ append_2019 <- area_vars %>%
          Industry_manufacturing = arm::rescale(Industry_manufacturing),
          Past_Lab = arm::rescale(Past_Lab))
 
-
+# Join bes and area-level vars  
 dat <- left_join(bes_2019, append_2019, by = "Area") %>%
   mutate(Year = 2019)
+
+# Save
 save(dat, file = "../Data/bes_2019.RData")
 
+# Remove all append dataframes
 rm(append_2015, append_2017, append_2019, area_vars)
 
 ################### End of script ###################

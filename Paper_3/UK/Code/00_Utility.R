@@ -1,4 +1,6 @@
-## Functions
+## Utility functions
+
+# Recode education categories
 educ_recode <- function(x){
   x <- rio::characterize(x)
   x <- str_replace(x, "&", "and")
@@ -28,6 +30,7 @@ educ_recode <- function(x){
   x
 }
 
+# Bucket age into bins
 age_bucket <- function(x) {
   age_breaks <- c(-Inf, 19, 24, 29, 44, 59, 64, 74, Inf)
   age_labels <- c("16-19", "20-24", "25-29", "30-44", "45-59", "60-64", "65-74", "75+")
@@ -39,6 +42,7 @@ age_bucket <- function(x) {
   x
 }
 
+# Bucket date into bins
 date_bucket <- function(x){
   x <- as.Date(x, format = "%Y%m%d")
   x <- as.numeric(abs(x - max(x)))
@@ -51,6 +55,7 @@ date_bucket <- function(x){
   x
 }
 
+# Recode vote intention
 vote_recode <- function(x, y) {
   x <- rio::characterize(x)
   x <- str_remove_all(x, "[,']")
@@ -75,7 +80,7 @@ vote_recode <- function(x, y) {
   x
 }
 
-## Poststratification function
+# Poststratification function
 post_strat <- function(mod, post, iters){
   
   out<- brms::posterior_epred(mod,
@@ -104,12 +109,12 @@ post_strat <- function(mod, post, iters){
 }
 
 
-## Get informative priors function
-
+# Get informative priors function
 get_inf_priors <- function(lambda, mod){
   require(tidyverse)
   require(brms)
   require(tidybayes)
+  
   # Get mu and sd for all fixed effects
   b_est <- mod %>%
     gather_draws(`b_.*`, regex = T) %>%
@@ -124,6 +129,7 @@ get_inf_priors <- function(lambda, mod){
   # Set Intercept prior
   priors <- set_prior(b_est$priors[b_est$var=="Intercept"],
                       class = "Intercept")
+  
   # Set priors for all fixed effects
   vars <- unique(b_est$var)
   vars <- vars[grepl("Intercept", vars)==FALSE]# exclude intercept
@@ -169,13 +175,12 @@ get_inf_priors <- function(lambda, mod){
 }
 
 
-## Function used to get the fixed effect informative priors
+# Function used to get the fixed effect informative priors
 get_inf_priors_FE <- function(mod, lambda) {
-  # Function to get coef est mu and sd from model
-  ## and print to set_prior brms for new model.
+  # Function needed for prior specification for 
+  # alternative model
   
-  # Extract b mu and sd from model and convert 
-  # brms set_prior format
+  # Get mu and sd for all fixed effects
   b_est <- mod %>%
     gather_draws(`b_.*`, regex = T) %>%
     group_by(.variable) %>%
@@ -210,7 +215,7 @@ get_inf_priors_FE <- function(mod, lambda) {
            var = str_replace(var, "/", "D"),
            priors = paste0("normal(", mu, ",", SD, ")"))
   
-  # Set Intercept prior
+  # Set Intercept prior and area SD prior
   priors <- c(set_prior(b_est$priors[b_est$var=="Intercept"],
                         class = "Intercept"),
               set_prior("student_t(5, 0, 5)", class = "sd", group = "Area"))
@@ -233,11 +238,6 @@ get_inf_priors_FE <- function(mod, lambda) {
                   coef = v)
     }
   }
-  
-  ## Set sd priors for small area
-  
-  
-  ## Set priors for all levels of random effects
   
   vars <- unique(mod_re$var)
   vars <- vars[grepl("Area|ST|PCON_ID", vars)==FALSE]# Exclude either State or PCON
@@ -264,3 +264,81 @@ get_inf_priors_FE <- function(mod, lambda) {
   priors  
 }
 
+## Extract variable parameter posteriors 
+extract_posteriors <- function(paths){
+  
+  
+  holder <- list()
+  for (i in 1:length(paths)){
+    
+    path <- paths[i]
+    sample <- str_split(str_split(path, "Sample_")[[1]][2], "/")[[1]][1]
+    year <- if(grepl("2017", path)==TRUE){2017} else{2019}
+    model <- case_when(
+      grepl("weak", path)=="TRUE" ~ "Weakly inf.",
+      grepl("inf_", path)=="TRUE" ~ "Random effect",
+      grepl("fe_", path)=="TRUE" ~ "Fixed effect")
+    lambda <- case_when(
+      model == "Weakly inf." ~ NA_real_,
+      grepl("_a", path)=="TRUE" ~ 1,
+      grepl("_b", path)=="TRUE" ~ 1.5,
+      grepl("_c", path)=="TRUE" ~ 2)
+    
+    mod <- readRDS(path)
+    
+    # Intercept
+    mod_Intercept <- mod %>%
+      spread_draws(b_Intercept) %>%
+      mutate(Sample = sample,
+             Model = model,
+             Lambda = lambda,
+             Year = year,
+             Variable = "Intercept") %>%
+      rename(Effect = b_Intercept)
+    
+    # Age
+    mod_Age <- mod %>%
+      spread_draws(r_Age[condition,]) %>%
+      mutate(Sample = sample,
+             Model = model,
+             Lambda = lambda,
+             Year = year,
+             Variable = "Age") %>%
+      rename(Effect = r_Age)
+    
+    # Education
+    mod_Education <- mod %>%
+      spread_draws(r_Education[condition,]) %>%
+      mutate(Sample = sample,
+             Model = model,
+             Lambda = lambda,
+             Year = year,
+             Variable = "Education") %>%
+      rename(Effect = r_Education)
+    
+    ## Past Labour vote
+    past_Lab <- mod %>%
+      spread_draws(b_Past_Lab) %>%
+      mutate(Sample = sample,
+             Model = model,
+             Lambda = lambda,
+             Year = year,
+             Variable = "Lab_vote",
+             condition = "Fixef") %>%
+      rename(Effect = b_Past_Lab)
+    
+    past_Leave <- mod %>%
+      spread_draws(b_leavehanretty) %>%
+      mutate(Sample = sample,
+             Model = model,
+             Lambda = lambda,
+             Year = year,
+             Variable = "Leave",
+             condition = "Fixef") %>%
+      rename(Effect = b_leavehanretty)
+    
+    holder[[i]] <- do.call("rbind", list(mod_Age, past_Lab, past_Leave, mod_Intercept, mod_Education))
+  }
+  dat <- do.call("rbind", holder)
+  dat
+}

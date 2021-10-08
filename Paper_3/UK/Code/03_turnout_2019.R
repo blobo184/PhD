@@ -1,4 +1,4 @@
-## Script to recode bes face-to-face surveys
+## Script to recode bes face-to-face surveys and estimate turnout
 ## And model turnout
 
 ## Set directory
